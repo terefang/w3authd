@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login Form</title>
+    <link rel="stylesheet" href="assets/opensans/latin.css">
+    <link rel="stylesheet" href="assets/opensans/latin-italic.css">
+    <link rel="stylesheet" href="assets/bootstrap5/bootstrap.min.css">
+    <style>
+        :root {
+            --bs-font-sans-serif: 'Open Sans'
+        }
+        body {
+            background-image: url('./blue-lava.jpg');
+            background-size: cover;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row mt-5">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Login</h4>
+                </div>
+                <div class="card-body">
+                    <form action="../auth" method="post">
+                        <div class="mb-3">
+                            <input name="s_username" type="username" class="form-control" id="s_username" placeholder="Enter your username">
+                        </div>
+                        <div class="mb-3">
+                            <input name="s_password" type="password" class="form-control" id="s_password" placeholder="Enter your password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="assets/jquery/jquery.min.js"></script>
+<script src="assets/bootstrap5/bootstrap.min.js"></script>
