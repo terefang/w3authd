@@ -1,16 +1,16 @@
-# w3autd
+# w3authd
 
-`w3autd` is a lightweight authentication daemon implementing the 
+`w3authd` is a lightweight authentication daemon implementing the 
 **auth-request** pattern for modern reverse proxies such as 
 **NGINX**, **Caddy**, and any reverse proxy capable of delegating 
 authentication to an external service.
 
 Instead of embedding authentication into every application, 
-`w3autd` centralizes authentication behind your reverse proxy, 
+`w3authd` centralizes authentication behind your reverse proxy, 
 allowing applications to remain focused on business logic while 
 access control is handled consistently across your infrastructure.
 
-In addition to acting as an authorization backend, `w3autd` provides 
+In addition to acting as an authorization backend, `w3authd` provides 
 a built-in **form-based login** workflow with pluggable authentication 
 backends, making it suitable for protecting both modern and legacy 
 web applications.
@@ -45,7 +45,7 @@ web applications.
         |
         v
 +-------------------------+
-|         w3autd          |
+|         w3authd          |
 |-------------------------|
 | Session Management      |
 | Login Forms             |
@@ -64,11 +64,11 @@ web applications.
 ## How it works
 
 For every incoming request, the reverse proxy performs an internal 
-authentication request to `w3autd`.
+authentication request to `w3authd`.
 
-- If the user already has a valid session, `w3autd` returns **200 OK** 
+- If the user already has a valid session, `w3authd` returns **200 OK** 
     and the request proceeds to the backend application.
-- If authentication is required, `w3autd` returns **401 Unauthorized**. 
+- If authentication is required, `w3authd` returns **401 Unauthorized**. 
     The reverse proxy redirects the user to the login page.
 - After successful authentication, a session cookie is issued and subsequent 
     requests are automatically authorized.
@@ -196,7 +196,7 @@ Internet
     v
 NGINX / Caddy
     |
-    +------> w3autd
+    +------> w3authd
     |
     +------> Application A
     |
@@ -205,7 +205,7 @@ NGINX / Caddy
     +------> Application C
 ```
 
-A single `w3autd` instance can protect multiple applications while 
+A single `w3authd` instance can protect multiple applications while 
 presenting users with a unified login experience.
 
 ## Building
