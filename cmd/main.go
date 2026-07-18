@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"w3authproxy"
 	"w3authproxy/pkg/ldap"
 	"w3authproxy/pkg/login"
 	"w3authproxy/pkg/pwdfile"
@@ -18,6 +19,7 @@ func main() {
 	prefix := flag.String("prefix", "/other", "path prefix")
 	sessionLifetime := flag.Int("sessionAge", 7200, "session lifetime")
 
+	doManual := flag.Bool("manual", false, "print manual")
 	doCrypt6 := flag.Bool("crypt", false, "crypt $6$ password")
 	doApr1 := flag.Bool("apr1", false, "crypt $apr1$ password")
 
@@ -38,7 +40,9 @@ func main() {
 	dumpTemplates := flag.String("dumpTemplates", "", "dump embedded templates to directory")
 	flag.Parse()
 
-	if *doCrypt6 {
+	if *doManual {
+		fmt.Println(w3authproxy.ManualText)
+	} else if *doCrypt6 {
 		fmt.Println(pwdfile.Crypt6Credential(flag.Arg(0)))
 	} else if *doApr1 {
 		fmt.Println(pwdfile.CryptApr1Credential(flag.Arg(0)))

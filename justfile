@@ -4,6 +4,8 @@ XDIR := justfile_directory()
 EXE := "w3authd"
 XEXE := XDIR+'/'+EXE
 
+XARCH := os()+"-"+arch()
+
 clean-assets:
     #!/bin/sh
     rm -rf {{XDIR}}/pkg/server/assets
@@ -52,10 +54,13 @@ make-release:
     #!/bin/bash
     VERSION=$(shtool version -l txt {{XDIR}}/version.txt)
     MESSAGE="automated release version $(shtool version -l text -d long {{XDIR}}/version.txt)"
-    gh release create v$VERSION --notes "$MESSAGE"
+    gh release create v$VERSION --notes "$MESSAGE" out/{{EXE}}-*
 
 build: fetch-assets
     #!/bin/sh
     export GOROOT=${HOME}/bin/go
     export PATH=$GOROOT/bin:$PATH
+    mkdir {{XDIR}}/out
+    VERSION=$(shtool version -l txt {{XDIR}}/version.txt)
     go build -o {{XEXE}} cmd/main.go
+    cp -v {{XEXE}} {{XDIR}}/out/{{EXE}}-v$VERSION-{{XARCH}}

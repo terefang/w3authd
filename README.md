@@ -208,6 +208,37 @@ NGINX / Caddy
 A single `w3authd` instance can protect multiple applications while 
 presenting users with a unified login experience.
 
+Here's a more polished version suitable for a README:
+
+## Versioning
+
+`w3autd` does not follow Semantic Versioning (SemVer). Instead, releases 
+use a **date-based versioning scheme**:
+
+```
+YYYY.MM.NNN
+```
+
+Where:
+
+* `YYYY` — four-digit release year
+* `MM` — two-digit release month
+* `NNN` — ever increasing release number
+
+For example:
+
+```
+2026.07.1
+2026.07.2
+2026.08.3
+```
+
+This scheme reflects the project's release cadence rather than attempting 
+to encode compatibility guarantees into the version number. 
+Breaking changes, new features, and bug fixes are documented in the 
+release notes, making each release self-describing without relying on 
+SemVer semantics.
+
 ## Building
 
 ```bash
@@ -216,4 +247,4 @@ just build
 
 ## License
 
-See the `LICENSE` file for licensing information.
+See the `LICENSE.md` file for licensing information.
