@@ -1,0 +1,6 @@
+
+  /u/fredo/GolandProjects/w3authproxy/version.txt -- Version Information for unknown (syntax: Text)
+  [automatically generated and maintained by GNU shtool]
+
+  This is unknown, Version 2026.07.4 (18-Jul-2026)
+
