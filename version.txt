@@ -1,6 +1,6 @@
 
-  /u/fredo/GolandProjects/w3authproxy/version.txt -- Version Information for unknown (syntax: Text)
+  ./version.txt -- Version Information for w3authd (syntax: Text)
   [automatically generated and maintained by GNU shtool]
 
-  This is unknown, Version 2026.07.7 (18-Jul-2026)
+  This is w3authd, Version 2026.08.12 (06-Aug-2026)
 

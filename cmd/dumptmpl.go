@@ -1,25 +1,30 @@
 package main
 
 import (
-    "fmt"
-    "w3authproxy"
+	"w3authproxy/pkg/server"
 
-    "github.com/terefang/gommons/pkg/subcmd"
+	"github.com/terefang/gommons/pkg/subcmd"
+	"modernc.org/fileutil"
 )
 
-type ManualCommand struct {
-    subcmd.NoFlags
-}
-
-func (r ManualCommand) Info() (string, string) {
-    return "manual", "print manual"
-}
-
-func (r ManualCommand) Execute(args []string) int {
-    fmt.Println(w3authproxy.ManualText)
-    return 0
+type DumpCommand struct {
+	subcmd.NoFlags
 }
 
 func init() {
-    subcmd.Register(&ManualCommand{})
+	subcmd.Register(&DumpCommand{})
+}
+
+func (r DumpCommand) Info() (string, string) {
+	return "dump-templates", "export internal templates to given directory"
+}
+
+func (r DumpCommand) Execute(args []string) int {
+	if len(args) == 1 {
+		_, _, _err := fileutil.CopyDir(server.StaticFiles, args[0], ".", nil)
+		if _err != nil {
+			panic(_err)
+		}
+	}
+	return 0
 }

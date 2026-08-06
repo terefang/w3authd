@@ -7,7 +7,11 @@ import (
 
 type LoginContext interface {
 	Name() string
-	HandleLogin(usr string, pwd string) (ok bool, roles []string, err error)
+	VerifyUserPass(usr string, pwd string) (ok bool, roles []string, err error)
+}
+
+type TokenLoginContext interface {
+	VerifyToken(token string) (ok bool, roles []string, err error)
 }
 
 type SimpleLoginContext struct {
@@ -20,10 +24,10 @@ func (s SimpleLoginContext) Name() string {
 	return s.name
 }
 
-func (s SimpleLoginContext) HandleLogin(_usr string, _pwd string) (ok bool, roles []string, err error) {
+func (s SimpleLoginContext) VerifyUserPass(_usr string, _pwd string) (ok bool, roles []string, err error) {
 	if _usr == s.user && pwdfile.ValidateCryptedCredentialSimple(_pwd, s.pass) {
 		log.Printf("Password validated for user %s", _usr)
-		return true, nil, nil
+		return true, []string{_usr}, nil
 	}
 	log.Printf("Password failed for user %s", _usr)
 	return false, nil, nil

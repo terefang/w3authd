@@ -43,7 +43,7 @@ func (l LdapLoginContext) Name() string {
 	return l.name
 }
 
-func (l LdapLoginContext) HandleLogin(usr string, pwd string) (bool, []string, error) {
+func (l LdapLoginContext) VerifyUserPass(usr string, pwd string) (bool, []string, error) {
 	ok, roles, err := l.HandleLoginInternal(usr, pwd)
 
 	if err == nil && ok {
@@ -195,6 +195,7 @@ func (l LdapLoginContext) FindUserDn(_l *ldapv3.Conn, usr string) (string, error
 func (l LdapLoginContext) FindUserGroups(_l *ldapv3.Conn, _usr string, _dn string) ([]string, error) {
 
 	_roles := make([]string, 0)
+	_roles = append(_roles, _usr)
 
 	if l.Ldap.UserRoleAttribute != nil {
 		_attrs := make([]string, 0)

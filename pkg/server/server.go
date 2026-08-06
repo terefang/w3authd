@@ -10,6 +10,7 @@ import (
 	"strings"
 	"w3authproxy/pkg/login"
 	"w3authproxy/pkg/overlayfs"
+	"w3authproxy/pkg/pwdfile"
 
 	"github.com/google/uuid"
 	"golang.org/x/time/rate"
@@ -29,6 +30,22 @@ type HttpServerContext struct {
 	AuthUserHeader  string
 	AuthRolesHeader string
 	TemplateOverlay string
+	doJWT           bool
+	JwtMethod       string
+	doAuthBasic     bool
+	doRedirect      bool
+}
+
+func (s *HttpServerContext) SetDoRedirect(r bool) {
+	s.doRedirect = r
+}
+
+func (s *HttpServerContext) SetJwtMethod(m string) {
+	s.JwtMethod = m
+}
+
+func (s *HttpServerContext) SetDoJWT(doJWT bool) {
+	s.doJWT = doJWT
 }
 
 func (s *HttpServerContext) SetSessionLifetime(n int) {
@@ -119,7 +136,7 @@ func (s *HttpServerContext) RegisterHandlers() {
 	s.Muxer.Handle("/", http.RedirectHandler(s.PathPrefix+"/login", http.StatusFound))
 }
 
-func (s *HttpServerContext) AddSessionCookie(w http.ResponseWriter, r *http.Request, usr string, roles []string) {
+func (s *HttpServerContext) AddSessionCookie(w http.ResponseWriter, r *http.Request, roles []string) {
 	_uuid, _ := uuid.NewRandom()
 
 	cookie := http.Cookie{
@@ -132,7 +149,7 @@ func (s *HttpServerContext) AddSessionCookie(w http.ResponseWriter, r *http.Requ
 	}
 	http.SetCookie(w, &cookie)
 
-	s.ValidSessions[cookie.Value] = append([]string{usr}, roles...)
+	s.ValidSessions[cookie.Value] = roles
 }
 
 func (s *HttpServerContext) SetAuthUserHeader(h string) {
@@ -147,6 +164,32 @@ func (s *HttpServerContext) SetTemplateOverlay(p string) {
 	s.TemplateOverlay = p
 }
 
+func (s *HttpServerContext) VerifyLogin(_usr, _pwd string) ([]string, bool, error) {
+	for _, _lh := range s.LoginDomains {
+		if _usr == pwdfile.BEARER_AUTH_USER {
+			if s.doJWT || s.doAuthBasic {
+				_th, _ok := _lh.(login.TokenLoginContext)
+				if _ok {
+					_lhandled, _roles, _lerr := _th.VerifyToken(_pwd)
+					if _lerr != nil {
+						return nil, false, _lerr
+					} else if _lhandled {
+						return _roles, true, nil
+					}
+				}
+			}
+			continue
+		}
+		_lhandled, _roles, _lerr := _lh.VerifyUserPass(_usr, _pwd)
+		if _lerr != nil {
+			return nil, false, _lerr
+		} else if _lhandled {
+			return _roles, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 func neuter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
@@ -158,50 +201,87 @@ func neuter(next http.Handler) http.Handler {
 	})
 }
 
+func ReturnValidationSuccess(s *HttpServerContext, w http.ResponseWriter, r *http.Request, _roles []string) {
+	w.Header().Set(s.AuthUserHeader, _roles[0])
+	w.Header().Set(s.AuthRolesHeader, strings.Join(_roles, ","))
+
+	//s.LogFmtR(r, "Session %s valid %v", r.URL.Path, _roles)
+	w.WriteHeader(http.StatusOK)
+}
+
 func HandleValidationFunction(s *HttpServerContext, w http.ResponseWriter, r *http.Request) {
+	if s.doJWT {
+		_ah := r.Header.Get("Authorization")
+		_ahp := strings.SplitN(_ah, " ", 2)
+		if len(_ahp) >= 2 && _ahp[0] == pwdfile.BEARER_AUTH_USER {
+			_roles, authed, err := s.VerifyLogin(_ahp[0], _ahp[1])
+			if err == nil && authed {
+				ReturnValidationSuccess(s, w, r, _roles)
+				return
+			}
+		}
+	}
+	if s.doAuthBasic {
+		u, p, ok := r.BasicAuth()
+		if ok {
+			_roles, authed, err := s.VerifyLogin(u, p)
+			if err == nil && authed {
+				ReturnValidationSuccess(s, w, r, _roles)
+				return
+			}
+		}
+	}
+
 	_c, _err := r.Cookie(s.CookieName)
-	if _err != nil {
+	if _err == nil {
+		_roles, _ok := s.ValidSessions[_c.Value]
+		if !_ok {
+			s.LogFmtR(r, "Session %s not valid", r.URL.Path)
+			if s.doRedirect {
+				http.Redirect(w, r, s.PathPrefix+"/login", http.StatusTemporaryRedirect)
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+			}
+		} else if _roles == nil {
+			s.LogFmtR(r, "Session %s not expired.", r.URL.Path)
+			if s.doRedirect {
+				http.Redirect(w, r, s.PathPrefix+"/login", http.StatusTemporaryRedirect)
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+			}
+		} else {
+			// check if roles are valid for request or issue
+			ReturnValidationSuccess(s, w, r, _roles)
+		}
+	} else {
 		s.LogFmtR(r, "Cookie %s not found", r.URL.Path)
 		if _werr := s.Limiter.Wait(s.Context); _werr != nil {
 			w.WriteHeader(http.StatusTooManyRequests)
 		} else {
-			w.WriteHeader(http.StatusForbidden)
+			if s.doRedirect {
+				http.Redirect(w, r, s.PathPrefix+"/login", http.StatusTemporaryRedirect)
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+			}
 		}
-		return
-	}
-
-	_roles, _ok := s.ValidSessions[_c.Value]
-	if !_ok {
-		s.LogFmtR(r, "Session %s not valid", r.URL.Path)
-		w.WriteHeader(http.StatusUnauthorized)
-	} else if _roles == nil {
-		s.LogFmtR(r, "Session %s not expired.", r.URL.Path)
-		w.WriteHeader(http.StatusUnauthorized)
-	} else {
-		w.Header().Set(s.AuthUserHeader, _roles[0])
-		w.Header().Set(s.AuthRolesHeader, strings.Join(_roles, ","))
-
-		s.LogFmtR(r, "Session %s valid %s", r.URL.Path, _c.Value)
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
 //go:embed assets *.html *.jpg
 var StaticFiles embed.FS
 
-func HandleLogin(s *HttpServerContext, w http.ResponseWriter, r *http.Request) bool {
+func (s *HttpServerContext) HandleLogin(w http.ResponseWriter, r *http.Request) bool {
 
 	_usr := r.FormValue("s_username")
 	_pwd := r.FormValue("s_password")
-	for _, _lh := range s.LoginDomains {
-		_lhandled, _roles, _lerr := _lh.HandleLogin(_usr, _pwd)
-		if _lerr != nil {
-			s.LogR(r, _lerr.Error())
-			return false
-		} else if _lhandled {
-			s.AddSessionCookie(w, r, _usr, _roles)
-			return true
-		}
+
+	_roles, _lhandled, _lerr := s.VerifyLogin(_usr, _pwd)
+	if _lerr != nil {
+		s.LogR(r, _lerr.Error())
+		return false
+	} else if _lhandled {
+		s.AddSessionCookie(w, r, _roles)
+		return true
 	}
 	return false
 }
@@ -209,8 +289,10 @@ func HandleLogin(s *HttpServerContext, w http.ResponseWriter, r *http.Request) b
 func HandleLoginFunction(s *HttpServerContext, w http.ResponseWriter, r *http.Request) {
 	if _werr := s.Limiter.Wait(s.Context); _werr != nil {
 		w.WriteHeader(http.StatusTooManyRequests)
-	} else if HandleLogin(s, w, r) {
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	} else if s.HandleLogin(w, r) {
+		w.Write([]byte(`<html><head><meta http-equiv="refresh" content="0;url=/" /></head></html>`))
+		w.WriteHeader(http.StatusOK)
+		//http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	} else {
 		http.Redirect(w, r, "./login/error.html", http.StatusTemporaryRedirect)
 	}

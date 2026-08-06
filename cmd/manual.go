@@ -1,25 +1,25 @@
 package main
 
 import (
-    "fmt"
-    "w3authproxy"
+	"fmt"
+	"w3authproxy"
 
-    "github.com/terefang/gommons/pkg/subcmd"
+	"github.com/terefang/gommons/pkg/subcmd"
 )
 
-type VersionCommand struct {
-    subcmd.NoFlags
+type ManualCommand struct {
+	subcmd.NoFlags
 }
 
-func (r VersionCommand) Info() (string, string) {
-    return "version", "print version info"
+func (r ManualCommand) Info() (string, string) {
+	return "manual", "print manual"
 }
 
-func (r VersionCommand) Execute(args []string) int {
-    fmt.Println(w3authproxy.VersionInfo)
-    return 0
+func (r ManualCommand) Execute(args []string) int {
+	fmt.Println(w3authproxy.ManualText)
+	return 0
 }
 
 func init() {
-    subcmd.Register(&VersionCommand{})
+	subcmd.Register(&ManualCommand{})
 }

@@ -88,7 +88,33 @@ Ideal for:
 
 Supports standard Apache `htpasswd` files, with a few extensions:
 
-TODO
+- Each non-empty, non-comment line must have the form "username:password:role1,...,roleN".
+- Lines beginning with '/', '#', ';', ':', '%', '!', or '$' are treated as comments and ignored.
+- Reading stops when a line containing only "END" is encountered.
+- Entries whose username begins with '*' are ignored unless isAllowAnyUser is set.
+
+### API-Keys
+
+In addition to username/password authentication, the authentication backend supports API key authentication. 
+API keys are loaded from a separate htpasswd-style file, allowing machine-to-machine clients to authenticate 
+without using user credentials. Each entry maps an API key to one or more roles using the format 
+"key::role1,...,roleN".
+
+Here's a README-style section that explains the feature clearly.
+
+##### Using Separate Files
+
+It is recommended to keep API keys in a dedicated file instead of mixing them with user credentials. 
+For example:
+
+```text
+config/
+├── users.htpasswd
+└── apikeys.htpasswd
+```
+
+This makes it easier to rotate API keys independently of user accounts and to apply different access 
+controls to each file.
 
 ### LDAP
 
@@ -145,21 +171,29 @@ server {
 ```caddy
 example.com {
 
-    route {
-
-        forward_auth http://127.0.0.1:8080 {
-            uri /path/to/w3auth/validate
-            copy_headers X-Auth-User X-Auth-Groups
+    handle /w3auth/* {
+        reverse_proxy http://127.0.0.1:5555
+    }
+    handle {	
+        forward_auth http://127.0.0.1:5555 {
+            uri /w3auth/validate
+            copy_headers X-Auth-Portal-User X-Auth-Portal-Roles
         }
 
-        reverse_proxy http://backend:8080
+    	root * {$SERVER_ROOT}
+	    # Enable compression (optional)
+  	    encode zstd br gzip
     }
 
-    handle_path /path/to/w3auth/login/* {
-        reverse_proxy http://127.0.0.1:8080
+    handle_errors {
+        rewrite * /404.html
+        templates
+        file_server
     }
 }
 ```
+
+for caddy integration to work correctly, you may need to give the `-redirect` option to `w3authd`.
 
 > **Note**
 >
